@@ -7,6 +7,7 @@ const config = {
 	database: process.env.DBDATABASE,
 	password: process.env.DBPASSWORD,
 	port: process.env.DBPORT,
+	max: 10,
 };
 
 const pool = new Pool(config);

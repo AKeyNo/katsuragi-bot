@@ -1,13 +1,12 @@
 /**
  * File: picture.js
  *
- * Summary: Replies back with hello when the user says !hello.
+ * Summary: Replies back with a random picture to the user.
  *
  */
-
+const Discord = require('discord.js');
 const { Command } = require('discord.js-commando');
-// const pool = require('../../clientpool');
-
+const pool = require('../../clientpool');
 require('dotenv').config();
 
 module.exports = class PictureCommand extends Command {
@@ -27,9 +26,22 @@ module.exports = class PictureCommand extends Command {
 	}
 
 	async run(message) {
-		/* pool.connect((err, client, done) => {
-			console.log('yo');
-			const pictreQuery = client.query('select')
-		} */
+		pool.connect((err, client, done) => {
+			client.query('SELECT * \
+					FROM CHARACTERS \
+					ORDER BY random() \
+					LIMIT 1', (err, res) => {
+				const character = res.rows[0];
+
+				const pictureEmbed = new Discord.MessageEmbed()
+					.setColor('GREEN')
+					.setTitle(character.name.replace(/_/g, ' '))
+					.setImage(character.picture)
+					.setFooter(character.series);
+
+				message.channel.send(pictureEmbed);
+				done(err);
+			});
+		});
 	}
 };

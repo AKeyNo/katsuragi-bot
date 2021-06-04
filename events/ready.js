@@ -22,7 +22,7 @@ module.exports = client => {
 
 const setUpDatabase = async () => {
 	pool.connect((err, client, done) => {
-		client.query('CREATE TABLE IF NOT EXISTS TEST( \
+		client.query('CREATE TABLE IF NOT EXISTS CHARACTERS( \
                 ID TEXT PRIMARY KEY NOT NULL, \
                 NAME TEXT NOT NULL, \
                 SERIES TEXT NOT NULL, \

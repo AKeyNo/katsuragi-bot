@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+// https://discord.com/oauth2/authorize?client_id=849198716069478400&scope=bot&permissions=2215102529
 const client = new Commando.Client({
 	commandPrefix: process.env.PREFIX,
 	owner: '189985219451944960',
