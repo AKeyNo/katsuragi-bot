@@ -20,6 +20,10 @@ const setUpGuildTable = async (guild) => {
 		client.query(`CREATE TABLE IF NOT EXISTS server${guild.id}( \
                 CHARACTERID TEXT PRIMARY KEY NOT NULL, \
                 DISCORDID TEXT)`);
+		client.query(`CREATE TABLE IF NOT EXISTS serverUsers${guild.id}( \
+					DISCORDID TEXT PRIMARY KEY NOT NULL, \
+					LASTCLAIM TIMESTAMP DEFAULT '1970-01-01 00:00:00-00', \
+					CLAIMSLEFT INT DEFAULT 0)`);
 		client.query(`INSERT INTO server${guild.id}(CHARACTERID) \
                 SELECT ID \
                 FROM CHARACTERS`, (err) => {
