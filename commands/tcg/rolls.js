@@ -43,25 +43,31 @@ module.exports = class RollsCommand extends Command {
 };
 
 const getNewCharacter = async (message, callback) => {
-	const client = await pool.connect();
+	const pgclient = await pool.connect();
 	// let pictureEmbed;
 	try {
-		const row = await client.query('SELECT * FROM characters where ID in \
-							(select CHARACTERID from server462387144103821313 \
+		const row = await pgclient.query(`SELECT * FROM CHARACTERS WHERE ID IN \
+							(select CHARACTERID from server${message.guild.id} \
 							WHERE DISCORDID IS NULL \
 							ORDER BY RANDOM() \
-							LIMIT 1)');
-		try {await callback(message, client, row);}
+							LIMIT 1)`);
+		try {await callback(message, pgclient, row);}
 		catch(e) {
 			console.log(e);
 		}
 	}
 	finally {
-		client.release();
+		pgclient.release();
 	}
 };
 
-const handleEmbed = (message, client, character) => {
+const assignCharacter = async (message, pgclient, character) => {
+	await pgclient.query(`UPDATE server${message.guild.id} \
+	SET DISCORDID = ${message.author.id}::text \
+	WHERE characterid = ${character.id}::text`);
+};
+
+const handleEmbed = async (message, pgclient, character) => {
 	// console.log(character);
 	const fields = character.rows[0];
 	const pictureEmbed = new Discord.MessageEmbed()
@@ -90,6 +96,12 @@ const handleEmbed = (message, client, character) => {
 				try {
 					collector.stop();
 					console.log(`${message.author.tag} (${message.author.id}) received ${fields.name} in server${message.guild.id}!.`);
+					try{
+						assignCharacter(message, pgclient, fields);
+					}
+					catch(e) {
+						console.log(e);
+					}
 				}
 				catch (error) { console.error(error); }
 			}
