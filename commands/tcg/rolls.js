@@ -29,21 +29,21 @@ module.exports = class RollsCommand extends Command {
 
 	async run(message) {
 		const random = Math.random() * (1 - 0) + 0;
+		const pgclient = await pool.connect();
 		// console.log(random);
 
 		// 10% chance to roll a claimed card
 		// 90% chance to roll a non-claimed card
 		if(random >= 0.1) {
-			getNewCharacter(message, handleEmbed);
+			getNewCharacter(message, handleEmbed, pgclient);
 		}
 		else {
-			message.reply('insert dupe code here');
+			getClaimedCharacter(message, pgclient);
 		}
 	}
 };
 
-const getNewCharacter = async (message, callback) => {
-	const pgclient = await pool.connect();
+const getNewCharacter = async (message, callback, pgclient) => {
 	// let pictureEmbed;
 	try {
 		const row = await pgclient.query(`SELECT * FROM CHARACTERS WHERE ID IN \
@@ -51,10 +51,36 @@ const getNewCharacter = async (message, callback) => {
 							WHERE DISCORDID IS NULL \
 							ORDER BY RANDOM() \
 							LIMIT 1)`);
-		try {await callback(message, pgclient, row);}
+		const fields = row.rows[0];
+		const pictureEmbed = new Discord.MessageEmbed()
+			.setColor('GREEN')
+			.setTitle(fields.name.replace(/_/g, ' '))
+			.setImage(fields.picture)
+			.setFooter(fields.series);
+		try {await callback(message, pgclient, row, pictureEmbed);}
 		catch(e) {
 			console.log(e);
 		}
+	}
+	finally {
+		pgclient.release();
+	}
+};
+
+const getClaimedCharacter = async (message, pgclient) => {
+	try {
+		const row = await pgclient.query(`SELECT * FROM CHARACTERS WHERE ID IN \
+							(select CHARACTERID from server${message.guild.id} \
+							WHERE DISCORDID IS NOT NULL \
+							ORDER BY RANDOM() \
+							LIMIT 1)`);
+		const fields = row.rows[0];
+		const pictureEmbed = new Discord.MessageEmbed()
+			.setColor('ORANGE')
+			.setTitle(fields.name.replace(/_/g, ' '))
+			.setImage(fields.picture)
+			.setFooter(fields.series);
+		message.channel.send(pictureEmbed);
 	}
 	finally {
 		pgclient.release();
@@ -67,14 +93,9 @@ const assignCharacter = async (message, pgclient, character) => {
 	WHERE characterid = ${character.id}::text`);
 };
 
-const handleEmbed = async (message, pgclient, character) => {
+const handleEmbed = async (message, pgclient, character, pictureEmbed) => {
 	// console.log(character);
 	const fields = character.rows[0];
-	const pictureEmbed = new Discord.MessageEmbed()
-		.setColor('GREEN')
-		.setTitle(fields.name.replace(/_/g, ' '))
-		.setImage(fields.picture)
-		.setFooter(fields.series);
 
 	const filter = (reaction, user) => {
 		return reaction.emoji.name === '⭐' && user.id === message.author.id;
@@ -116,7 +137,9 @@ const handleEmbed = async (message, pgclient, character) => {
 			}
 			else {
 				// updates embed to escapedEmbed if the fish runs away
-				try { console.log(`${message.author.id} did not react to this message.`); }
+				try {
+					// console.log(`${message.author.id} did not react to this message.`);
+				}
 				catch (error) { console.error(error); }
 			}
 		});
