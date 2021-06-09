@@ -35,11 +35,12 @@ module.exports = class RollsCommand extends Command {
 		// 10% chance to roll a claimed card
 		// 90% chance to roll a non-claimed card
 		if(random >= 0.1) {
-			getNewCharacter(message, handleEmbed, pgclient);
+			await getNewCharacter(message, handleEmbed, pgclient);
 		}
 		else {
-			getClaimedCharacter(message, pgclient);
+			await getClaimedCharacter(message, pgclient);
 		}
+		pgclient.release();
 	}
 };
 
@@ -51,6 +52,12 @@ const getNewCharacter = async (message, callback, pgclient) => {
 							WHERE DISCORDID IS NULL \
 							ORDER BY RANDOM() \
 							LIMIT 1)`);
+
+		if(!row.rows[0]) {
+			getClaimedCharacter(message, pgclient);
+			return;
+		}
+
 		const fields = row.rows[0];
 		const pictureEmbed = new Discord.MessageEmbed()
 			.setColor('GREEN')
@@ -62,8 +69,8 @@ const getNewCharacter = async (message, callback, pgclient) => {
 			console.log(e);
 		}
 	}
-	finally {
-		pgclient.release();
+	catch (e) {
+		console.log(e);
 	}
 };
 
@@ -74,6 +81,12 @@ const getClaimedCharacter = async (message, pgclient) => {
 							WHERE DISCORDID IS NOT NULL \
 							ORDER BY RANDOM() \
 							LIMIT 1)`);
+
+		if(!row.rows[0]) {
+			getNewCharacter(message, handleEmbed, pgclient);
+			return;
+		}
+
 		const fields = row.rows[0];
 		const pictureEmbed = new Discord.MessageEmbed()
 			.setColor('ORANGE')
@@ -82,8 +95,8 @@ const getClaimedCharacter = async (message, pgclient) => {
 			.setFooter(fields.series);
 		message.channel.send(pictureEmbed);
 	}
-	finally {
-		pgclient.release();
+	catch (e) {
+		console.log(e);
 	}
 };
 
@@ -123,12 +136,13 @@ const handleEmbed = async (message, pgclient, character, pictureEmbed) => {
 					catch(e) {
 						console.log(e);
 					}
+					message.reply(`you claimed ${fields.name.replace(/_/g, ' ')}!`);
 				}
 				catch (error) { console.error(error); }
 			}
 		});
 
-		// end reaction collector if time runs out or the author catches the fish
+		// end reaction collector if time runs out or the author doesn't claim the character
 		collector.on('end', () => {
 			// sentEmbed.reactions.removeAll().catch(error => console.error('Failed to clear reactions: ', error));
 
@@ -136,7 +150,6 @@ const handleEmbed = async (message, pgclient, character, pictureEmbed) => {
 				console.log(`${message.author.id} reacted to this message.`);
 			}
 			else {
-				// updates embed to escapedEmbed if the fish runs away
 				try {
 					// console.log(`${message.author.id} did not react to this message.`);
 				}
