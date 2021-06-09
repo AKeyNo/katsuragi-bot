@@ -136,7 +136,7 @@ const handleEmbed = async (message, pgclient, character, pictureEmbed) => {
 					catch(e) {
 						console.log(e);
 					}
-					message.reply(`you claimed ${fields.name.replace(/_/g, ' ')}!`);
+					message.reply(`you claimed **${fields.name.replace(/_/g, ' ')}**!`);
 				}
 				catch (error) { console.error(error); }
 			}
