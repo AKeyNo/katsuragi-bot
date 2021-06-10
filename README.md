@@ -6,6 +6,7 @@ Discord trading card game bot.
 
 ## Recommended Downloads
 - Visual Studio Code - https://code.visualstudio.com/
+- PostgreSQL - https://www.postgresql.org/
 
 ## Installation
 0. Clone the repository.
@@ -14,5 +15,9 @@ Discord trading card game bot.
 3. Head to the main directory in a command prompt. Enter `npm install`. This will install all the required node modules.
 4. To run the bot, head to the main directory in a command prompt and type `node index.js`.
 
+## Adding characters
+1. Manually add it to the PostgreSQL database table called characters. Need the character's name, the series, and a link to the picture of the character.
+
 ## To-do
-- ?
+- Better way to add characters
+- Showing off collection for each user and allow for trading
