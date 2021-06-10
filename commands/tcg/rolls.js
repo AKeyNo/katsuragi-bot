@@ -27,6 +27,7 @@ module.exports = class RollsCommand extends Command {
 		});
 	}
 
+	// randomly generates either a claimed or new character
 	async run(message) {
 		const random = Math.random() * (1 - 0) + 0;
 		const pgclient = await pool.connect();
@@ -44,6 +45,17 @@ module.exports = class RollsCommand extends Command {
 	}
 };
 
+/**
+ * Function: getNewCharacter
+ * Parameters:
+ * 		message: contains information about the message the user sent
+ * 		callback: callback for embed claim check
+ * 		pgclient: pgclient
+ *
+ * Description:
+ * Finds a random character that has not been claimed yet. If all characters are claimed
+ * on the server, it will jump to getClaimedCharacter.
+ */
 const getNewCharacter = async (message, callback, pgclient) => {
 	// let pictureEmbed;
 	try {
@@ -53,6 +65,8 @@ const getNewCharacter = async (message, callback, pgclient) => {
 							ORDER BY RANDOM() \
 							LIMIT 1)`);
 
+		// check if there is a valid character to be claimed,
+		// if not, jumps to getClaimedCharacter
 		if(!row.rows[0]) {
 			getClaimedCharacter(message, pgclient);
 			return;
@@ -74,6 +88,16 @@ const getNewCharacter = async (message, callback, pgclient) => {
 	}
 };
 
+/**
+ * Function: getClaimedCharacter
+ * Parameters:
+ * 		message: contains information about the message the user sent
+ * 		pgclient: pgclient
+ *
+ * Description:
+ * Finds a random character that has been claimed. If all characters are not claimed
+ * on the server, it will jump to getNewCharacter.
+ */
 const getClaimedCharacter = async (message, pgclient) => {
 	try {
 		const row = await pgclient.query(`SELECT * FROM CHARACTERS WHERE ID IN \
@@ -82,6 +106,8 @@ const getClaimedCharacter = async (message, pgclient) => {
 							ORDER BY RANDOM() \
 							LIMIT 1)`);
 
+		// check if there is a valid character that is already claimed,
+		// if not, jumps to getNewCharacter
 		if(!row.rows[0]) {
 			getNewCharacter(message, handleEmbed, pgclient);
 			return;
@@ -100,12 +126,36 @@ const getClaimedCharacter = async (message, pgclient) => {
 	}
 };
 
+/**
+ * Function: assignCharacter
+ * Parameters:
+ * 		message: contains information about the message the user sent
+ * 		pgclient: pgclient
+ * 		character: contains information about the character being claimed
+ *
+ * Description:
+ * Assigns the character to the user on the server they claimed it on using
+ * their Discord ID.
+ */
 const assignCharacter = async (message, pgclient, character) => {
 	await pgclient.query(`UPDATE server${message.guild.id} \
 	SET DISCORDID = ${message.author.id}::text \
 	WHERE characterid = ${character.id}::text`);
 };
 
+/**
+ * Function: getClaimedCharacter
+ * Parameters:
+ * 		message: contains information about the message the user sent
+ * 		pgclient: pgclient
+ * 		character: contains information about the character being claimed
+ * 		pictureEmbed: contains the embed to be sent
+ *
+ * Description:
+ * Sends an embed of the character that waits for the original user's reaction.
+ * If the user reacts to the message within COLLECTIONTIME, calls assignCharacter.
+ * If not, closes it after COLLECTIONTIME.
+ */
 const handleEmbed = async (message, pgclient, character, pictureEmbed) => {
 	// console.log(character);
 	const fields = character.rows[0];
