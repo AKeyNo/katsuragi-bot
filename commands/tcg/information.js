@@ -43,11 +43,10 @@ module.exports = class InformationCommand extends Command {
 
 		const pgclient = await pool.connect();
 		try {
-			const row = await pgclient.query(`SELECT characters.name, characters.series, characters.picture, server${message.guild.id}.discordid
+			const row = await pgclient.query(`SELECT characters.name, characters.series, characters.picture, server${message.guild.id}.discordID
 											FROM characters 
-											INNER JOIN server${message.guild.id} ON characters.id=server${message.guild.id}.characterid
+											INNER JOIN server${message.guild.id} ON characters.ID=server${message.guild.id}.characterID
 											WHERE name = '${name}'::text`);
-			// console.log(row);
 
 			const fields = row.rows[0];
 			const pictureEmbed = new Discord.MessageEmbed()

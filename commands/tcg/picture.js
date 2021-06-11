@@ -13,7 +13,7 @@ module.exports = class PictureCommand extends Command {
 	constructor(client) {
 		super(client, {
 			name: 'picture',
-			aliases: ['p'],
+			aliases: ['p', 'random'],
 			group: 'test',
 			memberName: 'picture',
 			description: 'Random Picture',
@@ -26,22 +26,33 @@ module.exports = class PictureCommand extends Command {
 	}
 
 	async run(message) {
-		pool.connect((err, client, done) => {
-			client.query('SELECT * \
-					FROM CHARACTERS \
-					ORDER BY random() \
-					LIMIT 1', (err, res) => {
-				const character = res.rows[0];
+		const pgclient = await pool.connect();
 
-				const pictureEmbed = new Discord.MessageEmbed()
-					.setColor('GREEN')
-					.setTitle(character.name.replace(/_/g, ' '))
-					.setImage(character.picture)
-					.setFooter(character.series);
+		try {
+			const row = await pgclient.query(`SELECT characters.name, characters.series, characters.picture, server${message.guild.id}.discordID
+					FROM characters
+					INNER JOIN server${message.guild.id} ON characters.ID=server${message.guild.id}.characterID
+					ORDER BY RANDOM()
+					LIMIT 1`);
+			const fields = row.rows[0];
 
-				message.channel.send(pictureEmbed);
-				done(err);
-			});
-		});
+			const pictureEmbed = new Discord.MessageEmbed()
+				.setColor('GREEN')
+				.setTitle(fields.name)
+				.setImage(fields.picture)
+				.setFooter(fields.series);
+
+			if(fields.discordid) {
+				const user = await message.client.users.fetch(fields.discordid);
+				pictureEmbed.setFooter(user.tag, user.displayAvatarURL());
+			}
+			message.channel.send(pictureEmbed);
+		}
+		catch(e) {
+			console.log(e);
+		}
+		finally {
+			pgclient.release();
+		}
 	}
 };

@@ -59,9 +59,9 @@ module.exports = class RollsCommand extends Command {
 const getNewCharacter = async (message, callback, pgclient) => {
 	// let pictureEmbed;
 	try {
-		const row = await pgclient.query(`SELECT * FROM CHARACTERS WHERE ID IN \
-							(select CHARACTERID from server${message.guild.id} \
-							WHERE DISCORDID IS NULL \
+		const row = await pgclient.query(`SELECT * FROM characters WHERE ID IN \
+							(select characterID from server${message.guild.id} \
+							WHERE discordID IS NULL \
 							ORDER BY RANDOM() \
 							LIMIT 1)`);
 
@@ -75,9 +75,9 @@ const getNewCharacter = async (message, callback, pgclient) => {
 		const fields = row.rows[0];
 		const pictureEmbed = new Discord.MessageEmbed()
 			.setColor('GREEN')
-			.setTitle(fields.name.replace(/_/g, ' '))
+			.setTitle(fields.name)
 			.setImage(fields.picture)
-			.setFooter(fields.series);
+			.setDescription(fields.series);
 		try {await callback(message, pgclient, row, pictureEmbed);}
 		catch(e) {
 			console.log(e);
@@ -100,11 +100,12 @@ const getNewCharacter = async (message, callback, pgclient) => {
  */
 const getClaimedCharacter = async (message, pgclient) => {
 	try {
-		const row = await pgclient.query(`SELECT * FROM CHARACTERS WHERE ID IN \
-							(select CHARACTERID from server${message.guild.id} \
-							WHERE DISCORDID IS NOT NULL \
+		const row = await pgclient.query(`SELECT characters.name, characters.series, characters.picture, server${message.guild.id}.discordID
+							FROM characters
+							INNER JOIN server${message.guild.id} ON characters.ID=server${message.guild.id}.characterID
+							WHERE discordID IS NOT NULL \
 							ORDER BY RANDOM() \
-							LIMIT 1)`);
+							LIMIT 1`);
 
 		// check if there is a valid character that is already claimed,
 		// if not, jumps to getNewCharacter
@@ -114,11 +115,17 @@ const getClaimedCharacter = async (message, pgclient) => {
 		}
 
 		const fields = row.rows[0];
+		console.log(fields);
 		const pictureEmbed = new Discord.MessageEmbed()
 			.setColor('ORANGE')
-			.setTitle(fields.name.replace(/_/g, ' '))
+			.setTitle(fields.name)
 			.setImage(fields.picture)
-			.setFooter(fields.series);
+			.setDescription(fields.series);
+
+		if(fields.discordid) {
+			const user = await message.client.users.fetch(fields.discordid);
+			pictureEmbed.setFooter(user.tag, user.displayAvatarURL());
+		}
 		message.channel.send(pictureEmbed);
 	}
 	catch (e) {
@@ -138,9 +145,9 @@ const getClaimedCharacter = async (message, pgclient) => {
  * their Discord ID.
  */
 const assignCharacter = async (message, pgclient, character) => {
-	await pgclient.query(`UPDATE server${message.guild.id} \
-	SET DISCORDID = ${message.author.id}::text \
-	WHERE characterid = ${character.id}::text`);
+	await pgclient.query(`UPDATE server${guild.id} \
+	SET discordID = ${message.author.id}::text \
+	WHERE characterID = ${character.id}::text`);
 };
 
 /**
@@ -186,7 +193,7 @@ const handleEmbed = async (message, pgclient, character, pictureEmbed) => {
 					catch(e) {
 						console.log(e);
 					}
-					message.reply(`you claimed **${fields.name.replace(/_/g, ' ')}**!`);
+					message.reply(`you claimed **${fields.name}**!`);
 				}
 				catch (error) { console.error(error); }
 			}
