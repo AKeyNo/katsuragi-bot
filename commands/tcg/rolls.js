@@ -145,7 +145,7 @@ const getClaimedCharacter = async (message, pgclient) => {
  * their Discord ID.
  */
 const assignCharacter = async (message, pgclient, character) => {
-	await pgclient.query(`UPDATE server${guild.id} \
+	await pgclient.query(`UPDATE server${message.guild.id} \
 	SET discordID = ${message.author.id}::text \
 	WHERE characterID = ${character.id}::text`);
 };
